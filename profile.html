@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Профиль</title>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial,sans-serif;
+background:#1f2329;
+color:white;
+display:flex;
+justify-content:center;
+align-items:center;
+min-height:100vh
+}
+
+.box{
+width:min(92vw,420px);
+background:#2a2f36;
+border-radius:14px;
+padding:24px;
+text-align:center
+}
+
+img{
+width:120px;
+height:120px;
+border-radius:50%;
+object-fit:cover;
+background:#666;
+margin-bottom:12px
+}
+
+input{
+width:100%;
+padding:12px;
+border:none;
+border-radius:8px;
+margin-top:10px;
+box-sizing:border-box
+}
+
+button{
+margin-top:10px;
+padding:12px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+font-weight:bold;
+width:100%
+}
+
+.orange{background:orange;color:#111}
+.gray{background:#6b7a8f;color:white}
+
+.row{
+display:flex;
+gap:10px
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="box">
+
+<img id="avatar">
+
+<h2 id="login">...</h2>
+
+<input id="bio" placeholder="Описание профиля" maxlength="120">
+
+<button class="orange" id="saveBio">Сохранить био</button>
+
+<input type="file" id="avatarInput" accept="image/*">
+
+<div class="row">
+<button class="gray" id="backBtn">Назад в чат</button>
+<button class="gray" id="logoutBtn">Выйти</button>
+</div>
+
+</div>
+
+<script>
+
+const avatar=document.getElementById("avatar")
+const login=document.getElementById("login")
+const bio=document.getElementById("bio")
+
+async function load(){
+
+const res=await fetch("/api/me")
+const data=await res.json()
+
+if(!data.loggedIn){
+location.href="/auth.html"
+return
+}
+
+login.textContent=data.login
+bio.value=data.bio||""
+
+avatar.src=data.avatar||"https://cdn-icons-png.flaticon.com/512/149/149071.png"
+
+}
+
+document.getElementById("saveBio").onclick=async()=>{
+
+const res=await fetch("/api/profile",{
+method:"POST",
+headers:{ "Content-Type":"application/json" },
+body:JSON.stringify({bio:bio.value})
+})
+
+const data=await res.json()
+
+alert(data.error||"Био сохранено")
+
+}
+
+document.getElementById("avatarInput").onchange=async()=>{
+
+const file=document.getElementById("avatarInput").files[0]
+
+if(!file)return
+
+const fd=new FormData()
+fd.append("avatar",file)
+
+const res=await fetch("/api/avatar",{method:"POST",body:fd})
+
+const data=await res.json()
+
+if(data.avatar){
+avatar.src=data.avatar
+}
+
+}
+
+document.getElementById("backBtn").onclick=()=>{
+location.href="/chat.html"
+}
+
+document.getElementById("logoutBtn").onclick=async()=>{
+
+await fetch("/api/logout",{method:"POST"})
+location.href="/auth.html"
+
+}
+
+load()
+
+</script>
+
+</body>
+</html>

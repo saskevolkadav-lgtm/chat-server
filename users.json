@@ -1,0 +1,34 @@
+[
+  {
+    "login": "vova5524",
+    "passwordHash": "$2b$10$5WQ/t.R2nBQYjHf80klcOOpZgqr/iPUCo1lFaMzEzL2D580S3fmTi",
+    "role": "creator",
+    "mutedUntil": 0,
+    "rememberToken": "8f8fb0b2-edb2-4893-916c-abbfb729a6a1",
+    "bio": "создатель",
+    "theme": "dark",
+    "avatar": "/uploads/1773028239700-IMG_0756.jpeg"
+  },
+  {
+    "login": "Vova5525",
+    "passwordHash": "$2b$10$P8GxrseHD6WfT6bxMJM7yOp3O8ltljwTi31vL1PNro7F5RbPeuoNK",
+    "role": "user",
+    "mutedUntil": 0
+  },
+  {
+    "login": "46219224106",
+    "passwordHash": "$2b$10$7r5Zh.EknOD01z99cvODkuGAuFU8p0Dpo/GBdtFTGXZF7QVP1Z/ju",
+    "role": "user",
+    "mutedUntil": 0,
+    "avatar": "",
+    "bio": ""
+  },
+  {
+    "login": "Kin_che_in",
+    "passwordHash": "$2b$10$q9Xu8xB044qITURq1p4VGu6/xSipD/k80x6X/ZNHHKPytDWzBKEdS",
+    "role": "user",
+    "mutedUntil": 0,
+    "avatar": "",
+    "bio": ""
+  }
+]

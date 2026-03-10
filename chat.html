@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:#1f2329;color:#fff;min-height:100vh}
+    body.theme-light{background:#eef2f7;color:#111}
+    .app{display:grid;grid-template-columns:270px 1fr;min-height:100vh}
+    .sidebar{background:#2a2f36;padding:14px;display:flex;flex-direction:column;gap:12px;border-right:1px solid rgba(255,255,255,.08)}
+    body.theme-light .sidebar{background:#fff;border-right:1px solid #d7dde8}
+    .me{display:flex;gap:10px;align-items:center}
+    .me img{width:54px;height:54px;border-radius:50%;object-fit:cover;background:#666}
+    .small{font-size:12px;opacity:.8}
+    .section{background:rgba(255,255,255,.05);padding:10px;border-radius:12px}
+    body.theme-light .section{background:#f5f7fb}
+    .section h3{margin:0 0 8px;font-size:14px}
+    .user{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:14px}
+    .dot{width:8px;height:8px;border-radius:50%;background:#777}.dot.on{background:#3ddc84}
+    .main{display:flex;flex-direction:column;min-height:100vh}
+    .top{padding:12px 14px;background:#2a2f36;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    body.theme-light .top{background:#fff;border-bottom:1px solid #d7dde8}
+    .topBtns,.row{display:flex;gap:8px;flex-wrap:wrap}
+    button,label.btnLike{border:none;border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:700}
+    .orange{background:orange;color:#111}.gray{background:#6b7a8f;color:#fff}.soft{background:#8a8a8a;color:#fff}
+    #status,#typing{padding:8px 14px;font-size:13px;color:#ffd082;min-height:18px}
+    .pinned{display:none;padding:10px 14px;background:#4f3d19;color:#ffe7b0}
+    .pinned.show{display:block}
+    .messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+    .message{display:flex;gap:10px;max-width:900px}
+    .message .avatar{width:42px;height:42px;border-radius:50%;object-fit:cover;background:#777;flex-shrink:0}
+    .bubble{background:#353b44;border-radius:14px;padding:10px 12px;min-width:0;position:relative}
+    body.theme-light .bubble{background:#fff;border:1px solid #d7dde8}
+    .meta{font-size:12px;opacity:.8;margin-bottom:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .reply{padding:6px 8px;border-left:3px solid orange;background:rgba(255,255,255,.06);border-radius:8px;margin-bottom:8px;font-size:12px}
+    .actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+    .actions button{padding:6px 8px;border-radius:8px;font-size:12px}
+    .count{font-weight:700;margin-left:4px}
+    .mediaImage,.mediaVideo{max-width:min(320px,70vw);border-radius:10px;display:block;cursor:pointer}
+    .composer{padding:10px;background:#2a2f36;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    body.theme-light .composer{background:#fff;border-top:1px solid #d7dde8}
+    #input,#bio,#muteLogin,#muteMinutes,#editBox{border:none;border-radius:10px;padding:12px;outline:none}
+    #input{flex:1;min-width:180px}
+    #fileInput,#avatarInput{display:none}
+    .adminPanel{display:none;padding:10px 14px;gap:8px;flex-wrap:wrap}
+    .adminPanel.show{display:flex}
+    .replyBar,.editBar{display:none;padding:8px 14px;background:#403f3f;gap:8px;align-items:center;justify-content:space-between}
+    .replyBar.show,.editBar.show{display:flex}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.86);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+    .modal.show{display:flex}
+    .modal img{max-width:100%;max-height:100%;border-radius:12px}
+    @media (max-width: 760px){
+      .app{grid-template-columns:1fr}
+      .sidebar{order:2;border-right:none;border-top:1px solid rgba(255,255,255,.08)}
+      .main{order:1;min-height:auto}
+      .messages{padding:10px}
+      .message{max-width:100%}
+      .mediaImage,.mediaVideo{max-width:100%}
+      button,label.btnLike{padding:10px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="me">
+        <img id="myAvatar" src="" alt="avatar">
+        <div>
+          <div id="who">Загрузка...</div>
+          <div class="small" id="roleText"></div>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Профиль</h3>
+        <div class="row" style="margin-bottom:8px">
+          <label class="btnLike soft" for="avatarInput">Аватар</label>
+          <button class="gray" id="saveBioBtn">Сохранить био</button>
+        </div>
+        <input id="bio" maxlength="120" placeholder="Описание профиля">
+      </div>
+      <div class="section">
+        <h3>Тема</h3>
+        <div class="row">
+          <button class="gray" data-theme="dark">Тёмная</button>
+          <button class="gray" data-theme="light">Светлая</button>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Пользователи</h3>
+        <div id="usersList"></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="top">
+        <div class="row">
+          <button class="orange" id="toggleAdmin" style="display:none">Мут / Пин</button>
+          <button class="gray" id="clearReplyBtn" style="display:none">Отмена ответа</button>
+        </div>
+        <div class="row">
+          <button class="gray" id="profileBtn">Профиль</button>
+          <button class="gray" id="logoutBtn">Выйти</button>
+        </div>
+      </div>
+
+      <div class="adminPanel" id="adminPanel">
+        <input id="muteLogin" placeholder="кого мутить">
+        <input id="muteMinutes" type="number" placeholder="минуты">
+        <button class="orange" id="muteUserBtn">Выдать мут</button>
+        <button class="gray" id="unmuteUserBtn">Снять мут</button>
+        <button class="gray" id="clearChatBtn">Очистить чат локально</button>
+      </div>
+
+      <div id="status"></div>
+      <div id="typing"></div>
+      <div class="pinned" id="pinnedBar"></div>
+      <div class="replyBar" id="replyBar"><span id="replyText"></span><button class="gray" id="cancelReplyBtn">X</button></div>
+      <div class="editBar" id="editBar"><input id="editBox" placeholder="Редактировать сообщение"><div class="row"><button class="orange" id="saveEditBtn">Сохранить</button><button class="gray" id="cancelEditBtn">Отмена</button></div></div>
+      <div class="messages" id="messages"></div>
+
+      <form class="composer" id="form">
+        <input id="input" placeholder="Сообщение">
+        <label class="btnLike soft" for="fileInput">Файл</label>
+        <button class="orange" type="submit">Send</button>
+      </form>
+
+      <input id="avatarInput" type="file" accept="image/*">
+      <input id="fileInput" type="file" accept="image/*,video/*">
+    </main>
+  </div>
+
+  <div class="modal" id="imageModal"><img id="modalImg" alt="fullscreen"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const defaultAvatar = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><rect width='100%' height='100%' fill='#777'/><text x='50%' y='54%' text-anchor='middle' fill='white' font-size='28' font-family='Arial'>?</text></svg>`);
+    const socket = io();
+    const el = id => document.getElementById(id);
+    const messages = el('messages');
+    let me = null;
+    let replyTo = null;
+    let editingId = null;
+    let typingTimer = null;
+    let usersCache = [];
+
+    function fmtTime(ts){ return new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
+    function esc(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+    function saveTheme(theme){ localStorage.setItem('chat_theme', theme); applyTheme(); }
+    function applyTheme(){ document.body.classList.toggle('theme-light', localStorage.getItem('chat_theme')==='light'); }
+
+    function setStatus(t){ el('status').textContent = t || ''; }
+
+    function renderUsers(users){
+      usersCache = users;
+      el('usersList').innerHTML = users.map(u => `
+        <div class="user">
+          <span class="dot ${u.online ? 'on' : ''}"></span>
+          <span>${esc(u.login)}</span>
+          <span class="small">${u.role === 'creator' ? 'создатель' : (u.mutedUntil > Date.now() ? 'мут' : '')}</span>
+        </div>
+      `).join('');
+    }
+
+    function renderPinned(msg){
+      const bar = el('pinnedBar');
+      if(!msg){ bar.classList.remove('show'); bar.textContent=''; return; }
+      const text = msg.type === 'text' ? msg.text : (msg.type === 'image' ? '[фото]' : '[видео]');
+      bar.classList.add('show');
+      bar.innerHTML = `<b>Закреп:</b> ${esc(msg.login)} — ${esc(text)}`;
+    }
+
+    function buildMessage(msg, isSystem=false){
+      const wrap = document.createElement('div');
+      wrap.className = 'message';
+      wrap.dataset.id = msg.id || '';
+      if(isSystem){
+        wrap.innerHTML = `<div class="bubble"><div>${esc(msg)}</div></div>`;
+        return wrap;
+      }
+      const liked = Array.isArray(msg.likes) && me && msg.likes.includes(me.login);
+      const likesCount = Array.isArray(msg.likes) ? msg.likes.length : 0;
+      const reply = msg.replyTo ? `<div class="reply"><b>${esc(msg.replyTo.login)}</b>: ${esc(msg.replyTo.text)}</div>` : '';
+      let content = '';
+      if(msg.type === 'text') content = `<div>${esc(msg.text)} ${msg.edited ? '<span class="small">(изменено)</span>' : ''}</div>`;
+      if(msg.type === 'image') content = `<img src="${esc(msg.url)}" class="mediaImage" alt="img">`;
+      if(msg.type === 'video') content = `<video src="${esc(msg.url)}" class="mediaVideo" controls></video>`;
+      wrap.innerHTML = `
+        <img class="avatar" src="${esc(msg.avatar || defaultAvatar)}" alt="avatar">
+        <div class="bubble">
+          <div class="meta"><b>${esc(msg.login)}</b><span>${fmtTime(msg.time)}</span></div>
+          ${reply}
+          ${content}
+          <div class="actions">
+            <button class="soft likeBtn">❤️ <span class="count">${likesCount}</span></button>
+            <button class="soft replyBtn">Ответ</button>
+            ${msg.login === me?.login ? '<button class="soft editBtn">Изменить</button>' : ''}
+            ${(msg.login === me?.login || me?.role === 'creator') ? '<button class="gray deleteBtn">Удалить</button>' : ''}
+            ${me?.role === 'creator' ? '<button class="gray pinBtn">Закреп</button>' : ''}
+          </div>
+        </div>`;
+      if(liked) wrap.querySelector('.likeBtn').style.outline = '2px solid orange';
+      const img = wrap.querySelector('.mediaImage');
+      if(img) img.onclick = () => { el('modalImg').src = msg.url; el('imageModal').classList.add('show'); };
+      wrap.querySelector('.replyBtn').onclick = () => {
+        replyTo = msg;
+        el('replyBar').classList.add('show');
+        el('replyText').textContent = `${msg.login}: ${msg.type === 'text' ? msg.text : (msg.type === 'image' ? '[фото]' : '[видео]')}`;
+      };
+      wrap.querySelector('.likeBtn').onclick = () => socket.emit('toggle like', msg.id);
+      const del = wrap.querySelector('.deleteBtn'); if(del) del.onclick = () => socket.emit('delete message', msg.id);
+      const pin = wrap.querySelector('.pinBtn'); if(pin) pin.onclick = () => socket.emit('pin message', msg.id);
+      const edit = wrap.querySelector('.editBtn'); if(edit) edit.onclick = () => {
+        editingId = msg.id;
+        el('editBox').value = msg.text || '';
+        el('editBar').classList.add('show');
+      };
+      return wrap;
+    }
+
+    function appendMessage(msg, isSystem=false){
+      messages.appendChild(buildMessage(msg, isSystem));
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function replaceMessage(msg){
+      const old = messages.querySelector(`[data-id="${msg.id}"]`);
+      if(!old) return appendMessage(msg);
+      old.replaceWith(buildMessage(msg));
+    }
+
+    async function loadMe(){
+      const res = await fetch('/api/me');
+      const data = await res.json();
+      if(!data.loggedIn){ location.href='/auth.html'; return; }
+      me = data;
+      el('who').textContent = `Ты: ${data.login}`;
+      el('roleText').textContent = data.role === 'creator' ? 'Создатель' : 'Пользователь';
+      el('myAvatar').src = data.avatar || defaultAvatar;
+      el('bio').value = data.bio || '';
+      if(data.role === 'creator') el('toggleAdmin').style.display = 'inline-flex';
+      setStatus(data.mutedUntil > Date.now() ? 'У тебя мут' : '');
+    }
+
+    el('profileBtn').onclick = () => {
+      location.href = '/profile.html';
+    };
+
+    el('logoutBtn').onclick = async () => {
+      await fetch('/api/logout', {method:'POST'});
+      location.href='/auth.html';
+    };
+
+    el('toggleAdmin').onclick = () => el('adminPanel').classList.toggle('show');
+    el('muteUserBtn').onclick = async () => {
+      const res = await fetch('/api/mute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:el('muteLogin').value.trim(),minutes:el('muteMinutes').value})});
+      const data = await res.json(); setStatus(data.error || 'Мут выдан');
+    };
+    el('unmuteUserBtn').onclick = async () => {
+      const res = await fetch('/api/unmute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:el('muteLogin').value.trim()})});
+      const data = await res.json(); setStatus(data.error || 'Мут снят');
+    };
+    el('clearChatBtn').onclick = () => { messages.innerHTML=''; setStatus('Локально очищено. После новых событий сообщения снова появятся.'); };
+    el('cancelReplyBtn').onclick = el('clearReplyBtn').onclick = () => { replyTo=null; el('replyBar').classList.remove('show'); };
+    el('cancelEditBtn').onclick = () => { editingId=null; el('editBar').classList.remove('show'); };
+    el('saveEditBtn').onclick = () => {
+      const text = el('editBox').value.trim();
+      if(!editingId || !text) return;
+      socket.emit('edit message', {id: editingId, text});
+      editingId = null;
+      el('editBar').classList.remove('show');
+    };
+    el('saveBioBtn').onclick = async () => {
+      const res = await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bio:el('bio').value})});
+      const data = await res.json(); setStatus(data.error || 'Био сохранено');
+    };
+    el('avatarInput').addEventListener('change', async () => {
+      const file = el('avatarInput').files[0]; if(!file) return;
+      const fd = new FormData(); fd.append('avatar', file);
+      const res = await fetch('/api/avatar', {method:'POST', body:fd});
+      const data = await res.json(); setStatus(data.error || 'Аватар обновлён');
+      if(data.avatar) el('myAvatar').src = data.avatar;
+    });
+    el('fileInput').addEventListener('change', async () => {
+      const file = el('fileInput').files[0]; if(!file) return;
+      if(file.type.startsWith('video/')){
+        const v = document.createElement('video');
+        v.preload = 'metadata';
+        v.src = URL.createObjectURL(file);
+        v.onloadedmetadata = async () => {
+          URL.revokeObjectURL(v.src);
+          if(v.duration > 15){ setStatus('Видео должно быть не длиннее 15 секунд'); el('fileInput').value=''; return; }
+          await uploadMedia(file);
+        };
+      } else {
+        await uploadMedia(file);
+      }
+    });
+    async function uploadMedia(file){
+      const fd = new FormData(); fd.append('file', file);
+      const res = await fetch('/api/upload',{method:'POST', body:fd});
+      const data = await res.json();
+      if(!res.ok){ setStatus(data.error || 'Ошибка загрузки'); return; }
+      socket.emit('chat message', {type:data.kind, url:data.url, replyTo: replyTo?.id || null});
+      replyTo = null; el('replyBar').classList.remove('show'); el('fileInput').value='';
+    }
+
+    el('form').addEventListener('submit', e => {
+      e.preventDefault();
+      const text = el('input').value.trim(); if(!text) return;
+      socket.emit('chat message', {type:'text', text, replyTo: replyTo?.id || null});
+      el('input').value='';
+      replyTo = null; el('replyBar').classList.remove('show');
+      socket.emit('typing', false);
+    });
+    el('input').addEventListener('input', () => {
+      socket.emit('typing', true);
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => socket.emit('typing', false), 1200);
+    });
+
+    socket.on('load messages', data => { messages.innerHTML=''; data.forEach(m => appendMessage(m)); });
+    socket.on('chat message', msg => appendMessage(msg));
+    socket.on('message updated', msg => replaceMessage(msg));
+    socket.on('message deleted', id => { const node = messages.querySelector(`[data-id="${id}"]`); if(node) node.remove(); });
+    socket.on('system message', text => appendMessage(text, true));
+    socket.on('users update', renderUsers);
+    socket.on('typing update', list => {
+      const filtered = list.filter(name => name !== me?.login);
+      el('typing').textContent = filtered.length ? `${filtered.join(', ')} печатает...` : '';
+    });
+    socket.on('chat error', setStatus);
+    socket.on('pinned update', renderPinned);
+
+    document.querySelectorAll('[data-theme]').forEach(btn => btn.onclick = () => saveTheme(btn.dataset.theme));
+    el('imageModal').onclick = () => el('imageModal').classList.remove('show');
+    applyTheme();
+    loadMe();
+  </script>
+</body>
+</html>

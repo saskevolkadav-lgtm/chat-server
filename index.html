@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>креветка</title>
+<style>
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:linear-gradient(135deg,#203754,#2c4464);
+  color:white;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+
+.container{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:48px;
+  max-width:1100px;
+  width:100%;
+  flex-wrap:wrap;
+}
+
+.text{
+  max-width:420px;
+}
+
+.text h1{
+  font-size:56px;
+  line-height:1.05;
+  margin:0 0 18px;
+}
+
+.text p{
+  font-size:20px;
+  line-height:1.5;
+  margin:0 0 28px;
+  color:rgba(255,255,255,0.9);
+}
+
+.buttons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+}
+
+button{
+  padding:13px 22px;
+  border:none;
+  border-radius:22px;
+  cursor:pointer;
+  font-size:17px;
+  font-weight:bold;
+}
+
+.orange{
+  background:orange;
+  color:black;
+}
+
+.gray{
+  background:#6b7a8f;
+  color:white;
+}
+
+.blue{
+  background:#4aa3ff;
+  color:white;
+}
+
+.image img{
+  width:min(100%,520px);
+  display:block;
+  border-radius:12px;
+  box-shadow:0 16px 40px rgba(0,0,0,0.28);
+}
+
+@media (max-width: 900px){
+  .container{
+    flex-direction:column;
+    text-align:center;
+  }
+
+  .buttons{
+    justify-content:center;
+  }
+
+  .text h1{
+    font-size:44px;
+  }
+
+  .text p{
+    font-size:18px;
+  }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="text">
+    <h1>огненная креветка</h1>
+    <p>Главная страница. Выбирай кнопку ниже.</p>
+    <div class="buttons">
+      <button class="orange" onclick="location.href='yes.html'">сосал</button>
+      <button class="gray" onclick="location.href='no.html'">лизал</button>
+      <button class="blue" onclick="location.href='chat.html'">чат</button>
+    </div>
+  </div>
+
+  <div class="image">
+    <img src="Знімок екрана 2026-03-07 232650.png" alt="огненная креветка">
+  </div>
+</div>
+</body>
+</html>
