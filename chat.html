@@ -3,340 +3,902 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chat</title>
+  <title>Messenger</title>
   <style>
     *{box-sizing:border-box}
-    body{margin:0;font-family:Arial,sans-serif;background:#1f2329;color:#fff;min-height:100vh}
-    body.theme-light{background:#eef2f7;color:#111}
-    .app{display:grid;grid-template-columns:270px 1fr;min-height:100vh}
-    .sidebar{background:#2a2f36;padding:14px;display:flex;flex-direction:column;gap:12px;border-right:1px solid rgba(255,255,255,.08)}
-    body.theme-light .sidebar{background:#fff;border-right:1px solid #d7dde8}
-    .me{display:flex;gap:10px;align-items:center}
-    .me img{width:54px;height:54px;border-radius:50%;object-fit:cover;background:#666}
-    .small{font-size:12px;opacity:.8}
-    .section{background:rgba(255,255,255,.05);padding:10px;border-radius:12px}
-    body.theme-light .section{background:#f5f7fb}
-    .section h3{margin:0 0 8px;font-size:14px}
-    .user{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:14px}
-    .dot{width:8px;height:8px;border-radius:50%;background:#777}.dot.on{background:#3ddc84}
-    .main{display:flex;flex-direction:column;min-height:100vh}
-    .top{padding:12px 14px;background:#2a2f36;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-    body.theme-light .top{background:#fff;border-bottom:1px solid #d7dde8}
-    .topBtns,.row{display:flex;gap:8px;flex-wrap:wrap}
-    button,label.btnLike{border:none;border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:700}
-    .orange{background:orange;color:#111}.gray{background:#6b7a8f;color:#fff}.soft{background:#8a8a8a;color:#fff}
-    #status,#typing{padding:8px 14px;font-size:13px;color:#ffd082;min-height:18px}
-    .pinned{display:none;padding:10px 14px;background:#4f3d19;color:#ffe7b0}
-    .pinned.show{display:block}
-    .messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
-    .message{display:flex;gap:10px;max-width:900px}
-    .message .avatar{width:42px;height:42px;border-radius:50%;object-fit:cover;background:#777;flex-shrink:0}
-    .bubble{background:#353b44;border-radius:14px;padding:10px 12px;min-width:0;position:relative}
-    body.theme-light .bubble{background:#fff;border:1px solid #d7dde8}
-    .meta{font-size:12px;opacity:.8;margin-bottom:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .reply{padding:6px 8px;border-left:3px solid orange;background:rgba(255,255,255,.06);border-radius:8px;margin-bottom:8px;font-size:12px}
-    .actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-    .actions button{padding:6px 8px;border-radius:8px;font-size:12px}
-    .count{font-weight:700;margin-left:4px}
-    .mediaImage,.mediaVideo{max-width:min(320px,70vw);border-radius:10px;display:block;cursor:pointer}
-    .composer{padding:10px;background:#2a2f36;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    body.theme-light .composer{background:#fff;border-top:1px solid #d7dde8}
-    #input,#bio,#muteLogin,#muteMinutes,#editBox{border:none;border-radius:10px;padding:12px;outline:none}
-    #input{flex:1;min-width:180px}
-    #fileInput,#avatarInput{display:none}
-    .adminPanel{display:none;padding:10px 14px;gap:8px;flex-wrap:wrap}
-    .adminPanel.show{display:flex}
-    .replyBar,.editBar{display:none;padding:8px 14px;background:#403f3f;gap:8px;align-items:center;justify-content:space-between}
-    .replyBar.show,.editBar.show{display:flex}
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.86);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
-    .modal.show{display:flex}
-    .modal img{max-width:100%;max-height:100%;border-radius:12px}
-    @media (max-width: 760px){
-      .app{grid-template-columns:1fr}
-      .sidebar{order:2;border-right:none;border-top:1px solid rgba(255,255,255,.08)}
-      .main{order:1;min-height:auto}
-      .messages{padding:10px}
-      .message{max-width:100%}
-      .mediaImage,.mediaVideo{max-width:100%}
-      button,label.btnLike{padding:10px}
+    :root{
+      --bg:#0f1115;
+      --panel:#171a21;
+      --panel-2:#1d212b;
+      --card:#232938;
+      --line:rgba(255,255,255,.08);
+      --text:#fff;
+      --muted:#a8b0c3;
+      --accent:#ff9f1c;
+      --danger:#ff5a5f;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --radius:18px;
+    }
+    body{
+      margin:0;
+      font-family:Arial,sans-serif;
+      background:linear-gradient(180deg,#0c0f14,#121720);
+      color:var(--text);
+      min-height:100vh;
+    }
+    .app{
+      display:flex;
+      flex-direction:column;
+      min-height:100vh;
+      max-width:1100px;
+      margin:0 auto;
+    }
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:10;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      padding:12px;
+      background:rgba(15,17,21,.92);
+      backdrop-filter:blur(10px);
+      border-bottom:1px solid var(--line);
+    }
+    .top-left,.top-right{
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .titleWrap{
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+    }
+    .chatTitle{
+      font-size:18px;
+      font-weight:700;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width:260px;
+    }
+    .chatSub{
+      font-size:12px;
+      color:var(--muted);
+    }
+    button,.fakeBtn,label.fakeBtn{
+      border:none;
+      border-radius:12px;
+      padding:11px 14px;
+      cursor:pointer;
+      font-weight:700;
+      color:#fff;
+      background:var(--panel-2);
+    }
+    .accent{background:var(--accent); color:#111}
+    .danger{background:var(--danger)}
+    .iconBtn{
+      min-width:44px;
+      height:44px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:0 14px;
+    }
+    .messages{
+      flex:1;
+      overflow-y:auto;
+      padding:14px 12px 110px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .msg{
+      display:flex;
+      gap:10px;
+      max-width:min(780px,100%);
+    }
+    .msg.mine{
+      align-self:flex-end;
+      flex-direction:row-reverse;
+    }
+    .avatar{
+      width:40px;
+      height:40px;
+      border-radius:50%;
+      object-fit:cover;
+      background:#666;
+      flex-shrink:0;
+    }
+    .bubble{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:10px 12px;
+      box-shadow:var(--shadow);
+      min-width:0;
+    }
+    .msg.mine .bubble{
+      background:#2d3547;
+    }
+    .meta{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      margin-bottom:6px;
+      font-size:12px;
+      color:var(--muted);
+      flex-wrap:wrap;
+    }
+    .name{
+      color:#fff;
+      font-weight:700;
+    }
+    .text{
+      white-space:pre-wrap;
+      word-break:break-word;
+      line-height:1.4;
+    }
+    .media{
+      max-width:min(320px,72vw);
+      border-radius:12px;
+      display:block;
+    }
+    .typing{
+      padding:0 14px 10px;
+      color:#ffcf88;
+      font-size:13px;
+      min-height:18px;
+    }
+    .composer{
+      position:fixed;
+      left:0;
+      right:0;
+      bottom:0;
+      z-index:12;
+      background:rgba(15,17,21,.96);
+      backdrop-filter:blur(10px);
+      border-top:1px solid var(--line);
+    }
+    .composerInner{
+      max-width:1100px;
+      margin:0 auto;
+      display:flex;
+      gap:8px;
+      padding:10px 12px;
+      align-items:center;
+    }
+    .input{
+      flex:1;
+      border:none;
+      outline:none;
+      background:var(--panel-2);
+      color:#fff;
+      border-radius:14px;
+      padding:14px 16px;
+      font-size:15px;
+    }
+    #fileInput{display:none}
+    .status{
+      padding:0 14px 8px;
+      color:#ffbdbd;
+      font-size:13px;
+      min-height:18px;
+    }
+    .overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.62);
+      display:none;
+      align-items:flex-end;
+      justify-content:center;
+      z-index:30;
+      padding:10px;
+    }
+    .overlay.show{display:flex}
+    .sheet{
+      width:min(100%,560px);
+      max-height:86vh;
+      overflow:auto;
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:22px;
+      box-shadow:var(--shadow);
+      padding:14px;
+    }
+    .sheetTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:12px;
+    }
+    .sheetTitle{
+      font-size:18px;
+      font-weight:700;
+    }
+    .search{
+      width:100%;
+      border:none;
+      outline:none;
+      background:var(--panel-2);
+      color:#fff;
+      border-radius:14px;
+      padding:14px;
+      font-size:15px;
+    }
+    .list{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      margin-top:12px;
+    }
+    .item{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      background:var(--panel-2);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px;
+      cursor:pointer;
+    }
+    .itemMain{
+      min-width:0;
+      flex:1;
+    }
+    .itemTitle{
+      font-weight:700;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .itemSub{
+      color:var(--muted);
+      font-size:12px;
+      margin-top:4px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .tiny{
+      font-size:12px;
+      color:var(--muted);
+    }
+    .onlineDot{
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      background:#666;
+      flex-shrink:0;
+    }
+    .onlineDot.on{background:#2ed573}
+    .row{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .groupMembers{
+      margin-top:10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+    }
+    .tag{
+      background:#30384a;
+      padding:7px 10px;
+      border-radius:999px;
+      font-size:12px;
+    }
+    .empty{
+      color:var(--muted);
+      padding:16px 8px;
+      text-align:center;
+    }
+    .hidden{display:none}
+    @media (max-width: 720px){
+      .chatTitle{max-width:120px}
+      .topbar{
+        padding:10px;
+      }
+      .messages{
+        padding:12px 10px 104px;
+      }
+      .composerInner{
+        padding:8px 10px;
+      }
+      .input{
+        font-size:16px;
+      }
+      .top-right .labelText{
+        display:none;
+      }
     }
   </style>
 </head>
 <body>
   <div class="app">
-    <aside class="sidebar">
-      <div class="me">
-        <img id="myAvatar" src="" alt="avatar">
-        <div>
-          <div id="who">Загрузка...</div>
-          <div class="small" id="roleText"></div>
-        </div>
-      </div>
-      <div class="section">
-        <h3>Профиль</h3>
-        <div class="row" style="margin-bottom:8px">
-          <label class="btnLike soft" for="avatarInput">Аватар</label>
-          <button class="gray" id="saveBioBtn">Сохранить био</button>
-        </div>
-        <input id="bio" maxlength="120" placeholder="Описание профиля">
-      </div>
-      <div class="section">
-        <h3>Тема</h3>
-        <div class="row">
-          <button class="gray" data-theme="dark">Тёмная</button>
-          <button class="gray" data-theme="light">Светлая</button>
-        </div>
-      </div>
-      <div class="section">
-        <h3>Пользователи</h3>
-        <div id="usersList"></div>
-      </div>
-    </aside>
-
-    <main class="main">
-      <div class="top">
-        <div class="row">
-          <button class="orange" id="toggleAdmin" style="display:none">Мут / Пин</button>
-          <button class="gray" id="clearReplyBtn" style="display:none">Отмена ответа</button>
-        </div>
-        <div class="row">
-          <button class="gray" id="profileBtn">Профиль</button>
-          <button class="gray" id="logoutBtn">Выйти</button>
+    <div class="topbar">
+      <div class="top-left">
+        <button class="iconBtn" id="openChatsBtn">☰</button>
+        <div class="titleWrap">
+          <div class="chatTitle" id="chatTitle">Загрузка...</div>
+          <div class="chatSub" id="chatSub">Мессенджер</div>
         </div>
       </div>
 
-      <div class="adminPanel" id="adminPanel">
-        <input id="muteLogin" placeholder="кого мутить">
-        <input id="muteMinutes" type="number" placeholder="минуты">
-        <button class="orange" id="muteUserBtn">Выдать мут</button>
-        <button class="gray" id="unmuteUserBtn">Снять мут</button>
-        <button class="gray" id="clearChatBtn">Очистить чат локально</button>
+      <div class="top-right">
+        <button class="iconBtn" id="openSearchBtn">🔍</button>
+        <button class="iconBtn" id="createGroupBtn">👥</button>
+        <button id="profileBtn">Профиль</button>
       </div>
+    </div>
 
-      <div id="status"></div>
-      <div id="typing"></div>
-      <div class="pinned" id="pinnedBar"></div>
-      <div class="replyBar" id="replyBar"><span id="replyText"></span><button class="gray" id="cancelReplyBtn">X</button></div>
-      <div class="editBar" id="editBar"><input id="editBox" placeholder="Редактировать сообщение"><div class="row"><button class="orange" id="saveEditBtn">Сохранить</button><button class="gray" id="cancelEditBtn">Отмена</button></div></div>
-      <div class="messages" id="messages"></div>
-
-      <form class="composer" id="form">
-        <input id="input" placeholder="Сообщение">
-        <label class="btnLike soft" for="fileInput">Файл</label>
-        <button class="orange" type="submit">Send</button>
-      </form>
-
-      <input id="avatarInput" type="file" accept="image/*">
-      <input id="fileInput" type="file" accept="image/*,video/*">
-    </main>
+    <div class="typing" id="typing"></div>
+    <div class="status" id="status"></div>
+    <div class="messages" id="messages"></div>
   </div>
 
-  <div class="modal" id="imageModal"><img id="modalImg" alt="fullscreen"></div>
+  <div class="composer">
+    <div class="composerInner">
+      <label class="fakeBtn" for="fileInput">＋</label>
+      <input id="fileInput" type="file" accept="image/*,video/*">
+      <input class="input" id="input" placeholder="Сообщение">
+      <button class="accent" id="sendBtn">Отправить</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="chatsOverlay">
+    <div class="sheet">
+      <div class="sheetTop">
+        <div class="sheetTitle">Чаты</div>
+        <button id="closeChatsBtn">Закрыть</button>
+      </div>
+      <div class="list" id="chatsList"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="searchOverlay">
+    <div class="sheet">
+      <div class="sheetTop">
+        <div class="sheetTitle">Поиск людей</div>
+        <button id="closeSearchBtn">Закрыть</button>
+      </div>
+      <input class="search" id="searchInput" placeholder="Введи логин">
+      <div class="list" id="searchResults"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="groupOverlay">
+    <div class="sheet">
+      <div class="sheetTop">
+        <div class="sheetTitle">Создать группу</div>
+        <button id="closeGroupBtn">Закрыть</button>
+      </div>
+      <input class="search" id="groupNameInput" placeholder="Название группы">
+      <input class="search" id="groupUserSearch" placeholder="Добавить участников по логину" style="margin-top:10px">
+      <div class="list" id="groupUserResults"></div>
+      <div class="groupMembers" id="groupMembers"></div>
+      <div class="row" style="margin-top:12px">
+        <button class="accent" id="saveGroupBtn">Создать</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="profileOverlay">
+    <div class="sheet">
+      <div class="sheetTop">
+        <div class="sheetTitle">Профиль</div>
+        <button id="closeProfileBtn">Закрыть</button>
+      </div>
+      <div class="list">
+        <div class="item" id="openProfilePageBtn">
+          <div class="itemMain">
+            <div class="itemTitle">Открыть профиль</div>
+            <div class="itemSub">Аватар, био и настройки профиля</div>
+          </div>
+        </div>
+        <div class="item" id="logoutBtn">
+          <div class="itemMain">
+            <div class="itemTitle">Выйти</div>
+            <div class="itemSub">Выход из аккаунта</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const defaultAvatar = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><rect width='100%' height='100%' fill='#777'/><text x='50%' y='54%' text-anchor='middle' fill='white' font-size='28' font-family='Arial'>?</text></svg>`);
+    const defaultAvatar = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(
+      `<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'>
+        <rect width='100%' height='100%' fill='#555'/>
+        <text x='50%' y='54%' text-anchor='middle' fill='white' font-size='28' font-family='Arial'>?</text>
+      </svg>`
+    );
+
     const socket = io();
+
     const el = id => document.getElementById(id);
-    const messages = el('messages');
+
     let me = null;
-    let replyTo = null;
-    let editingId = null;
+    let currentConversation = null;
+    let conversations = [];
+    let onlineUsers = [];
+    let typingUsers = [];
     let typingTimer = null;
-    let usersCache = [];
+    let selectedGroupMembers = [];
 
-    function fmtTime(ts){ return new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
-    function esc(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
-    function saveTheme(theme){ localStorage.setItem('chat_theme', theme); applyTheme(); }
-    function applyTheme(){ document.body.classList.toggle('theme-light', localStorage.getItem('chat_theme')==='light'); }
-
-    function setStatus(t){ el('status').textContent = t || ''; }
-
-    function renderUsers(users){
-      usersCache = users;
-      el('usersList').innerHTML = users.map(u => `
-        <div class="user">
-          <span class="dot ${u.online ? 'on' : ''}"></span>
-          <span>${esc(u.login)}</span>
-          <span class="small">${u.role === 'creator' ? 'создатель' : (u.mutedUntil > Date.now() ? 'мут' : '')}</span>
-        </div>
-      `).join('');
+    function esc(s){
+      const d = document.createElement('div');
+      d.textContent = s || '';
+      return d.innerHTML;
     }
 
-    function renderPinned(msg){
-      const bar = el('pinnedBar');
-      if(!msg){ bar.classList.remove('show'); bar.textContent=''; return; }
-      const text = msg.type === 'text' ? msg.text : (msg.type === 'image' ? '[фото]' : '[видео]');
-      bar.classList.add('show');
-      bar.innerHTML = `<b>Закреп:</b> ${esc(msg.login)} — ${esc(text)}`;
+    function fmtTime(ts){
+      return new Date(ts).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
     }
 
-    function buildMessage(msg, isSystem=false){
-      const wrap = document.createElement('div');
-      wrap.className = 'message';
-      wrap.dataset.id = msg.id || '';
-      if(isSystem){
-        wrap.innerHTML = `<div class="bubble"><div>${esc(msg)}</div></div>`;
-        return wrap;
-      }
-      const liked = Array.isArray(msg.likes) && me && msg.likes.includes(me.login);
-      const likesCount = Array.isArray(msg.likes) ? msg.likes.length : 0;
-      const reply = msg.replyTo ? `<div class="reply"><b>${esc(msg.replyTo.login)}</b>: ${esc(msg.replyTo.text)}</div>` : '';
-      let content = '';
-      if(msg.type === 'text') content = `<div>${esc(msg.text)} ${msg.edited ? '<span class="small">(изменено)</span>' : ''}</div>`;
-      if(msg.type === 'image') content = `<img src="${esc(msg.url)}" class="mediaImage" alt="img">`;
-      if(msg.type === 'video') content = `<video src="${esc(msg.url)}" class="mediaVideo" controls></video>`;
-      wrap.innerHTML = `
-        <img class="avatar" src="${esc(msg.avatar || defaultAvatar)}" alt="avatar">
-        <div class="bubble">
-          <div class="meta"><b>${esc(msg.login)}</b><span>${fmtTime(msg.time)}</span></div>
-          ${reply}
-          ${content}
-          <div class="actions">
-            <button class="soft likeBtn">❤️ <span class="count">${likesCount}</span></button>
-            <button class="soft replyBtn">Ответ</button>
-            ${msg.login === me?.login ? '<button class="soft editBtn">Изменить</button>' : ''}
-            ${(msg.login === me?.login || me?.role === 'creator') ? '<button class="gray deleteBtn">Удалить</button>' : ''}
-            ${me?.role === 'creator' ? '<button class="gray pinBtn">Закреп</button>' : ''}
-          </div>
-        </div>`;
-      if(liked) wrap.querySelector('.likeBtn').style.outline = '2px solid orange';
-      const img = wrap.querySelector('.mediaImage');
-      if(img) img.onclick = () => { el('modalImg').src = msg.url; el('imageModal').classList.add('show'); };
-      wrap.querySelector('.replyBtn').onclick = () => {
-        replyTo = msg;
-        el('replyBar').classList.add('show');
-        el('replyText').textContent = `${msg.login}: ${msg.type === 'text' ? msg.text : (msg.type === 'image' ? '[фото]' : '[видео]')}`;
-      };
-      wrap.querySelector('.likeBtn').onclick = () => socket.emit('toggle like', msg.id);
-      const del = wrap.querySelector('.deleteBtn'); if(del) del.onclick = () => socket.emit('delete message', msg.id);
-      const pin = wrap.querySelector('.pinBtn'); if(pin) pin.onclick = () => socket.emit('pin message', msg.id);
-      const edit = wrap.querySelector('.editBtn'); if(edit) edit.onclick = () => {
-        editingId = msg.id;
-        el('editBox').value = msg.text || '';
-        el('editBar').classList.add('show');
-      };
-      return wrap;
+    function openOverlay(id){
+      el(id).classList.add('show');
     }
 
-    function appendMessage(msg, isSystem=false){
-      messages.appendChild(buildMessage(msg, isSystem));
-      messages.scrollTop = messages.scrollHeight;
+    function closeOverlay(id){
+      el(id).classList.remove('show');
     }
 
-    function replaceMessage(msg){
-      const old = messages.querySelector(`[data-id="${msg.id}"]`);
-      if(!old) return appendMessage(msg);
-      old.replaceWith(buildMessage(msg));
+    function setStatus(text){
+      el('status').textContent = text || '';
+    }
+
+    function getConversationTitle(conv){
+      return conv ? conv.name : 'Чат';
     }
 
     async function loadMe(){
       const res = await fetch('/api/me');
       const data = await res.json();
-      if(!data.loggedIn){ location.href='/auth.html'; return; }
+
+      if(!data.loggedIn){
+        location.href = '/auth.html';
+        return;
+      }
+
       me = data;
-      el('who').textContent = `Ты: ${data.login}`;
-      el('roleText').textContent = data.role === 'creator' ? 'Создатель' : 'Пользователь';
-      el('myAvatar').src = data.avatar || defaultAvatar;
-      el('bio').value = data.bio || '';
-      if(data.role === 'creator') el('toggleAdmin').style.display = 'inline-flex';
-      setStatus(data.mutedUntil > Date.now() ? 'У тебя мут' : '');
     }
 
-    el('profileBtn').onclick = () => {
+    async function loadConversations(preferId){
+      const res = await fetch('/api/conversations');
+      const data = await res.json();
+
+      conversations = Array.isArray(data) ? data : [];
+      renderChats();
+
+      if (!currentConversation) {
+        currentConversation = conversations.find(c => c.id === 'general') || conversations[0] || null;
+      }
+
+      if (preferId) {
+        const found = conversations.find(c => c.id === preferId);
+        if (found) currentConversation = found;
+      }
+
+      updateHeader();
+
+      if (currentConversation) {
+        await openConversation(currentConversation.id);
+      }
+    }
+
+    function updateHeader(){
+      el('chatTitle').textContent = currentConversation ? getConversationTitle(currentConversation) : 'Нет чата';
+
+      if (!currentConversation) {
+        el('chatSub').textContent = '';
+        return;
+      }
+
+      if (currentConversation.type === 'private') {
+        const isOnline = onlineUsers.includes(currentConversation.name);
+        el('chatSub').textContent = isOnline ? 'онлайн' : 'оффлайн';
+      } else {
+        el('chatSub').textContent = currentConversation.isDefault ? 'общая группа' : 'группа';
+      }
+    }
+
+    function renderChats(){
+      const box = el('chatsList');
+
+      if (!conversations.length) {
+        box.innerHTML = `<div class="empty">Чатов пока нет</div>`;
+        return;
+      }
+
+      box.innerHTML = conversations.map(conv => {
+        const active = currentConversation && currentConversation.id === conv.id;
+        const last = conv.lastMessage
+          ? `${conv.lastMessage.login}: ${conv.lastMessage.text}`
+          : 'Пока сообщений нет';
+
+        let leftDot = '';
+        if (conv.type === 'private') {
+          leftDot = `<span class="onlineDot ${onlineUsers.includes(conv.name) ? 'on' : ''}"></span>`;
+        }
+
+        return `
+          <div class="item" data-chat-id="${esc(conv.id)}" style="${active ? 'outline:2px solid var(--accent)' : ''}">
+            ${leftDot}
+            <div class="itemMain">
+              <div class="itemTitle">${esc(conv.name)}</div>
+              <div class="itemSub">${esc(last)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      box.querySelectorAll('[data-chat-id]').forEach(node => {
+        node.onclick = async () => {
+          closeOverlay('chatsOverlay');
+          await openConversation(node.dataset.chatId);
+        };
+      });
+    }
+
+    async function openConversation(conversationId){
+      const conv = conversations.find(c => c.id === conversationId);
+      if (!conv) return;
+
+      if (currentConversation && currentConversation.id !== conversationId) {
+        socket.emit('leave conversation', { conversationId: currentConversation.id });
+      }
+
+      currentConversation = conv;
+      updateHeader();
+      renderChats();
+
+      socket.emit('join conversation', { conversationId });
+
+      const res = await fetch(`/api/conversations/${conversationId}/messages`);
+      const data = await res.json();
+
+      const box = el('messages');
+      box.innerHTML = '';
+
+      if (!Array.isArray(data) || !data.length) {
+        box.innerHTML = `<div class="empty">Здесь пока нет сообщений</div>`;
+        return;
+      }
+
+      data.forEach(renderMessage);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function renderMessage(msg){
+      const box = el('messages');
+      const mine = me && msg.login === me.login;
+
+      const node = document.createElement('div');
+      node.className = 'msg' + (mine ? ' mine' : '');
+
+      let body = '';
+      if (msg.type === 'text') {
+        body = `<div class="text">${esc(msg.text)}</div>`;
+      } else if (msg.type === 'image') {
+        body = `<img class="media" src="${esc(msg.url)}" alt="img">`;
+      } else if (msg.type === 'video') {
+        body = `<video class="media" src="${esc(msg.url)}" controls></video>`;
+      }
+
+      node.innerHTML = `
+        <img class="avatar" src="${esc(msg.avatar || defaultAvatar)}" alt="avatar">
+        <div class="bubble">
+          <div class="meta">
+            <span class="name">${esc(msg.login)}</span>
+            <span>${fmtTime(msg.time)}</span>
+          </div>
+          ${body}
+        </div>
+      `;
+
+      box.appendChild(node);
+    }
+
+    async function searchUsers(q){
+      const res = await fetch('/api/search-users?q=' + encodeURIComponent(q));
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    }
+
+    function renderSearchResults(users){
+      const box = el('searchResults');
+
+      if (!users.length) {
+        box.innerHTML = `<div class="empty">Никого не найдено</div>`;
+        return;
+      }
+
+      box.innerHTML = users.map(u => `
+        <div class="item" data-login="${esc(u.login)}">
+          <img class="avatar" src="${esc(u.avatar || defaultAvatar)}" alt="avatar">
+          <div class="itemMain">
+            <div class="itemTitle">${esc(u.login)}</div>
+            <div class="itemSub">${esc(u.bio || 'Без описания')}</div>
+          </div>
+          <span class="onlineDot ${onlineUsers.includes(u.login) ? 'on' : ''}"></span>
+        </div>
+      `).join('');
+
+      box.querySelectorAll('[data-login]').forEach(node => {
+        node.onclick = async () => {
+          const login = node.dataset.login;
+          const res = await fetch('/api/conversations/private/' + encodeURIComponent(login), {
+            method: 'POST'
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            setStatus(data.error || 'Ошибка');
+            return;
+          }
+
+          closeOverlay('searchOverlay');
+          await loadConversations(data.conversation.id);
+        };
+      });
+    }
+
+    function renderGroupMembers(){
+      const box = el('groupMembers');
+      box.innerHTML = selectedGroupMembers.map(login => `
+        <span class="tag">${esc(login)}</span>
+      `).join('');
+    }
+
+    function renderGroupSearch(users){
+      const box = el('groupUserResults');
+
+      if (!users.length) {
+        box.innerHTML = `<div class="empty">Никого не найдено</div>`;
+        return;
+      }
+
+      box.innerHTML = users.map(u => `
+        <div class="item" data-login="${esc(u.login)}">
+          <img class="avatar" src="${esc(u.avatar || defaultAvatar)}" alt="avatar">
+          <div class="itemMain">
+            <div class="itemTitle">${esc(u.login)}</div>
+            <div class="itemSub">${esc(u.bio || 'Без описания')}</div>
+          </div>
+        </div>
+      `).join('');
+
+      box.querySelectorAll('[data-login]').forEach(node => {
+        node.onclick = () => {
+          const login = node.dataset.login;
+          if (!selectedGroupMembers.includes(login)) {
+            selectedGroupMembers.push(login);
+            renderGroupMembers();
+          }
+        };
+      });
+    }
+
+    async function sendText(){
+      const text = el('input').value.trim();
+      if (!text || !currentConversation) return;
+
+      socket.emit('chat message', {
+        conversationId: currentConversation.id,
+        type: 'text',
+        text
+      });
+
+      el('input').value = '';
+      socket.emit('typing', { conversationId: currentConversation.id, isTyping: false });
+    }
+
+    async function uploadMedia(file){
+      if (!currentConversation) return;
+
+      const fd = new FormData();
+      fd.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: fd
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setStatus(data.error || 'Ошибка загрузки');
+        return;
+      }
+
+      socket.emit('chat message', {
+        conversationId: currentConversation.id,
+        type: data.kind,
+        url: data.url
+      });
+
+      setStatus('');
+    }
+
+    el('openChatsBtn').onclick = () => openOverlay('chatsOverlay');
+    el('closeChatsBtn').onclick = () => closeOverlay('chatsOverlay');
+
+    el('openSearchBtn').onclick = () => {
+      el('searchInput').value = '';
+      el('searchResults').innerHTML = '';
+      openOverlay('searchOverlay');
+      el('searchInput').focus();
+    };
+    el('closeSearchBtn').onclick = () => closeOverlay('searchOverlay');
+
+    el('createGroupBtn').onclick = () => {
+      selectedGroupMembers = [];
+      el('groupNameInput').value = '';
+      el('groupUserSearch').value = '';
+      el('groupUserResults').innerHTML = '';
+      renderGroupMembers();
+      openOverlay('groupOverlay');
+    };
+    el('closeGroupBtn').onclick = () => closeOverlay('groupOverlay');
+
+    el('profileBtn').onclick = () => openOverlay('profileOverlay');
+    el('closeProfileBtn').onclick = () => closeOverlay('profileOverlay');
+
+    el('openProfilePageBtn').onclick = () => {
       location.href = '/profile.html';
     };
 
     el('logoutBtn').onclick = async () => {
-      await fetch('/api/logout', {method:'POST'});
-      location.href='/auth.html';
+      await fetch('/api/logout', { method: 'POST' });
+      location.href = '/auth.html';
     };
 
-    el('toggleAdmin').onclick = () => el('adminPanel').classList.toggle('show');
-    el('muteUserBtn').onclick = async () => {
-      const res = await fetch('/api/mute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:el('muteLogin').value.trim(),minutes:el('muteMinutes').value})});
-      const data = await res.json(); setStatus(data.error || 'Мут выдан');
-    };
-    el('unmuteUserBtn').onclick = async () => {
-      const res = await fetch('/api/unmute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:el('muteLogin').value.trim()})});
-      const data = await res.json(); setStatus(data.error || 'Мут снят');
-    };
-    el('clearChatBtn').onclick = () => { messages.innerHTML=''; setStatus('Локально очищено. После новых событий сообщения снова появятся.'); };
-    el('cancelReplyBtn').onclick = el('clearReplyBtn').onclick = () => { replyTo=null; el('replyBar').classList.remove('show'); };
-    el('cancelEditBtn').onclick = () => { editingId=null; el('editBar').classList.remove('show'); };
-    el('saveEditBtn').onclick = () => {
-      const text = el('editBox').value.trim();
-      if(!editingId || !text) return;
-      socket.emit('edit message', {id: editingId, text});
-      editingId = null;
-      el('editBar').classList.remove('show');
-    };
-    el('saveBioBtn').onclick = async () => {
-      const res = await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bio:el('bio').value})});
-      const data = await res.json(); setStatus(data.error || 'Био сохранено');
-    };
-    el('avatarInput').addEventListener('change', async () => {
-      const file = el('avatarInput').files[0]; if(!file) return;
-      const fd = new FormData(); fd.append('avatar', file);
-      const res = await fetch('/api/avatar', {method:'POST', body:fd});
-      const data = await res.json(); setStatus(data.error || 'Аватар обновлён');
-      if(data.avatar) el('myAvatar').src = data.avatar;
+    el('searchInput').addEventListener('input', async () => {
+      const q = el('searchInput').value.trim();
+      if (!q) {
+        el('searchResults').innerHTML = '';
+        return;
+      }
+      const users = await searchUsers(q);
+      renderSearchResults(users);
     });
+
+    el('groupUserSearch').addEventListener('input', async () => {
+      const q = el('groupUserSearch').value.trim();
+      if (!q) {
+        el('groupUserResults').innerHTML = '';
+        return;
+      }
+      const users = await searchUsers(q);
+      renderGroupSearch(users);
+    });
+
+    el('saveGroupBtn').onclick = async () => {
+      const name = el('groupNameInput').value.trim();
+
+      const res = await fetch('/api/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          members: selectedGroupMembers
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setStatus(data.error || 'Ошибка создания группы');
+        return;
+      }
+
+      closeOverlay('groupOverlay');
+      selectedGroupMembers = [];
+      await loadConversations(data.conversation.id);
+    };
+
+    el('sendBtn').onclick = sendText;
+
+    el('input').addEventListener('keypress', e => {
+      if (e.key === 'Enter') sendText();
+    });
+
+    el('input').addEventListener('input', () => {
+      if (!currentConversation) return;
+
+      socket.emit('typing', {
+        conversationId: currentConversation.id,
+        isTyping: true
+      });
+
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => {
+        socket.emit('typing', {
+          conversationId: currentConversation.id,
+          isTyping: false
+        });
+      }, 1200);
+    });
+
     el('fileInput').addEventListener('change', async () => {
-      const file = el('fileInput').files[0]; if(!file) return;
-      if(file.type.startsWith('video/')){
+      const file = el('fileInput').files[0];
+      if (!file) return;
+
+      if (file.type.startsWith('video/')) {
         const v = document.createElement('video');
         v.preload = 'metadata';
         v.src = URL.createObjectURL(file);
+
         v.onloadedmetadata = async () => {
           URL.revokeObjectURL(v.src);
-          if(v.duration > 15){ setStatus('Видео должно быть не длиннее 15 секунд'); el('fileInput').value=''; return; }
+          if (v.duration > 15) {
+            setStatus('Видео должно быть не длиннее 15 секунд');
+            el('fileInput').value = '';
+            return;
+          }
           await uploadMedia(file);
+          el('fileInput').value = '';
         };
       } else {
         await uploadMedia(file);
+        el('fileInput').value = '';
       }
     });
-    async function uploadMedia(file){
-      const fd = new FormData(); fd.append('file', file);
-      const res = await fetch('/api/upload',{method:'POST', body:fd});
-      const data = await res.json();
-      if(!res.ok){ setStatus(data.error || 'Ошибка загрузки'); return; }
-      socket.emit('chat message', {type:data.kind, url:data.url, replyTo: replyTo?.id || null});
-      replyTo = null; el('replyBar').classList.remove('show'); el('fileInput').value='';
-    }
 
-    el('form').addEventListener('submit', e => {
-      e.preventDefault();
-      const text = el('input').value.trim(); if(!text) return;
-      socket.emit('chat message', {type:'text', text, replyTo: replyTo?.id || null});
-      el('input').value='';
-      replyTo = null; el('replyBar').classList.remove('show');
-      socket.emit('typing', false);
-    });
-    el('input').addEventListener('input', () => {
-      socket.emit('typing', true);
-      clearTimeout(typingTimer);
-      typingTimer = setTimeout(() => socket.emit('typing', false), 1200);
+    socket.on('chat message', msg => {
+      if (!currentConversation || msg.conversationId !== currentConversation.id) return;
+
+      const empty = el('messages').querySelector('.empty');
+      if (empty) el('messages').innerHTML = '';
+
+      renderMessage(msg);
+      el('messages').scrollTop = el('messages').scrollHeight;
     });
 
-    socket.on('load messages', data => { messages.innerHTML=''; data.forEach(m => appendMessage(m)); });
-    socket.on('chat message', msg => appendMessage(msg));
-    socket.on('message updated', msg => replaceMessage(msg));
-    socket.on('message deleted', id => { const node = messages.querySelector(`[data-id="${id}"]`); if(node) node.remove(); });
-    socket.on('system message', text => appendMessage(text, true));
-    socket.on('users update', renderUsers);
-    socket.on('typing update', list => {
-      const filtered = list.filter(name => name !== me?.login);
-      el('typing').textContent = filtered.length ? `${filtered.join(', ')} печатает...` : '';
+    socket.on('conversation updated', async () => {
+      const keepId = currentConversation ? currentConversation.id : null;
+      await loadConversations(keepId);
     });
-    socket.on('chat error', setStatus);
-    socket.on('pinned update', renderPinned);
 
-    document.querySelectorAll('[data-theme]').forEach(btn => btn.onclick = () => saveTheme(btn.dataset.theme));
-    el('imageModal').onclick = () => el('imageModal').classList.remove('show');
-    applyTheme();
-    loadMe();
+    socket.on('presence update', list => {
+      onlineUsers = Array.isArray(list) ? list : [];
+      renderChats();
+      updateHeader();
+    });
+
+    socket.on('typing update', payload => {
+      if (!currentConversation) return;
+      if (!payload || payload.conversationId !== currentConversation.id) return;
+
+      const users = (payload.users || []).filter(u => u !== me.login);
+      typingUsers = users;
+
+      el('typing').textContent = users.length
+        ? `${users.join(', ')} печатает...`
+        : '';
+    });
+
+    socket.on('users changed', async () => {
+      const keepId = currentConversation ? currentConversation.id : null;
+      await loadConversations(keepId);
+    });
+
+    document.querySelectorAll('.overlay').forEach(node => {
+      node.addEventListener('click', e => {
+        if (e.target === node) node.classList.remove('show');
+      });
+    });
+
+    (async function init(){
+      await loadMe();
+      await loadConversations('general');
+    })();
   </script>
 </body>
 </html>
