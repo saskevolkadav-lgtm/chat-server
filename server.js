@@ -17,7 +17,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const sessionMiddleware = session({
-  secret: 'super_secret_chat_key_change_me_2',
+  secret: 'super_secret_chat_key_change_me_3',
   resave: false,
   saveUninitialized: false,
   rolling: true,
@@ -37,17 +37,12 @@ app.use(express.static(__dirname));
 
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+
 app.use('/uploads', express.static(uploadsDir));
 
 const usersFile = path.join(__dirname, 'users.json');
+const conversationsFile = path.join(__dirname, 'conversations.json');
 const messagesFile = path.join(__dirname, 'messages.json');
-const pinnedFile = path.join(__dirname, 'pinned.json');
-
-let users = [];
-let messages = [];
-let pinnedMessageId = null;
-const onlineUsers = new Set();
-const typingUsers = new Set();
 
 function readJsonSafe(file, fallback) {
   if (!fs.existsSync(file)) return fallback;
@@ -58,24 +53,75 @@ function readJsonSafe(file, fallback) {
   }
 }
 
-users = readJsonSafe(usersFile, []);
-messages = readJsonSafe(messagesFile, []);
-pinnedMessageId = readJsonSafe(pinnedFile, null);
+let users = readJsonSafe(usersFile, []);
+let conversations = readJsonSafe(conversationsFile, []);
+let messages = readJsonSafe(messagesFile, []);
 
 function saveUsers() {
   fs.writeFileSync(usersFile, JSON.stringify(users, null, 2), 'utf8');
+}
+
+function saveConversations() {
+  fs.writeFileSync(conversationsFile, JSON.stringify(conversations, null, 2), 'utf8');
 }
 
 function saveMessages() {
   fs.writeFileSync(messagesFile, JSON.stringify(messages, null, 2), 'utf8');
 }
 
-function savePinned() {
-  fs.writeFileSync(pinnedFile, JSON.stringify(pinnedMessageId, null, 2), 'utf8');
+function makeId() {
+  return crypto.randomBytes(10).toString('hex');
 }
 
 function getUserByLogin(login) {
   return users.find(u => u.login.toLowerCase() === String(login).toLowerCase());
+}
+
+function publicUser(u) {
+  return {
+    login: u.login,
+    role: u.role,
+    avatar: u.avatar || '',
+    bio: u.bio || ''
+  };
+}
+
+function ensureGeneralConversation() {
+  let general = conversations.find(c => c.isDefault === true);
+  if (!general) {
+    general = {
+      id: 'general',
+      type: 'group',
+      name: 'Общий чат',
+      members: users.map(u => u.login),
+      createdBy: 'system',
+      createdAt: Date.now(),
+      isDefault: true
+    };
+    conversations.unshift(general);
+    saveConversations();
+  } else {
+    const allLogins = users.map(u => u.login);
+    let changed = false;
+    for (const login of allLogins) {
+      if (!general.members.includes(login)) {
+        general.members.push(login);
+        changed = true;
+      }
+    }
+    if (changed) saveConversations();
+  }
+}
+
+ensureGeneralConversation();
+
+function addUserToGeneral(login) {
+  const general = conversations.find(c => c.id === 'general');
+  if (!general) return;
+  if (!general.members.includes(login)) {
+    general.members.push(login);
+    saveConversations();
+  }
 }
 
 function authRequired(req, res, next) {
@@ -92,31 +138,46 @@ function pageAuthRequired(req, res, next) {
   next();
 }
 
-function makeId() {
-  return crypto.randomBytes(8).toString('hex');
+function canAccessConversation(login, conversation) {
+  if (!conversation) return false;
+  return Array.isArray(conversation.members) && conversation.members.includes(login);
 }
 
-function currentPinnedMessage() {
-  return messages.find(m => m.id === pinnedMessageId) || null;
-}
+function getConversationForUser(conversation, myLogin) {
+  if (!conversation) return null;
 
-function publicUser(u) {
+  let title = conversation.name || 'Чат';
+
+  if (conversation.type === 'private') {
+    const otherLogin = conversation.members.find(m => m !== myLogin) || myLogin;
+    const otherUser = getUserByLogin(otherLogin);
+    title = otherUser ? otherUser.login : otherLogin;
+  }
+
   return {
-    login: u.login,
-    role: u.role,
-    avatar: u.avatar || '',
-    bio: u.bio || '',
-    mutedUntil: u.mutedUntil || 0,
-    online: onlineUsers.has(u.login)
+    id: conversation.id,
+    type: conversation.type,
+    name: title,
+    members: conversation.members || [],
+    createdBy: conversation.createdBy,
+    createdAt: conversation.createdAt,
+    isDefault: !!conversation.isDefault
   };
 }
 
-function emitUsers() {
-  io.emit('users update', users.map(publicUser));
+function getConversationMessages(conversationId) {
+  return messages
+    .filter(m => m.conversationId === conversationId)
+    .slice(-200);
 }
 
-function emitTyping() {
-  io.emit('typing update', Array.from(typingUsers));
+function getPrivateConversation(loginA, loginB) {
+  return conversations.find(c =>
+    c.type === 'private' &&
+    c.members.length === 2 &&
+    c.members.includes(loginA) &&
+    c.members.includes(loginB)
+  );
 }
 
 const storage = multer.diskStorage({
@@ -174,26 +235,33 @@ app.post('/api/register', async (req, res) => {
   const passwordHash = await bcrypt.hash(password, 10);
   const role = users.length === 0 ? 'creator' : 'user';
 
-  users.push({
+  const user = {
     login,
     passwordHash,
     role,
-    mutedUntil: 0,
     avatar: '',
     bio: ''
-  });
+  };
 
+  users.push(user);
   saveUsers();
 
-  req.session.userLogin = login;
+  addUserToGeneral(login);
 
+  req.session.userLogin = login;
   if (remember) {
     req.session.cookie.maxAge = 1000 * 60 * 60 * 24 * 30;
   } else {
     req.session.cookie.expires = false;
   }
 
-  return res.json({ ok: true, login, role });
+  io.emit('users changed');
+
+  return res.json({
+    ok: true,
+    login: user.login,
+    role: user.role
+  });
 });
 
 app.post('/api/login', async (req, res) => {
@@ -219,17 +287,14 @@ app.post('/api/login', async (req, res) => {
     req.session.cookie.expires = false;
   }
 
-  return res.json({ ok: true, login: user.login, role: user.role });
+  return res.json({
+    ok: true,
+    login: user.login,
+    role: user.role
+  });
 });
 
 app.post('/api/logout', (req, res) => {
-  if (req.session.userLogin) {
-    onlineUsers.delete(req.session.userLogin);
-    typingUsers.delete(req.session.userLogin);
-    emitUsers();
-    emitTyping();
-  }
-
   req.session.destroy(() => {
     res.clearCookie('connect.sid');
     return res.json({ ok: true });
@@ -250,7 +315,6 @@ app.get('/api/me', (req, res) => {
     loggedIn: true,
     login: user.login,
     role: user.role,
-    mutedUntil: user.mutedUntil || 0,
     avatar: user.avatar || '',
     bio: user.bio || ''
   });
@@ -258,36 +322,162 @@ app.get('/api/me', (req, res) => {
 
 app.post('/api/profile', authRequired, (req, res) => {
   const user = getUserByLogin(req.session.userLogin);
-  if (!user) {
-    return res.status(404).json({ error: 'Пользователь не найден' });
-  }
+  if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
   user.bio = String(req.body.bio || '').trim().slice(0, 120);
   saveUsers();
-  emitUsers();
+
+  io.emit('users changed');
 
   return res.json({ ok: true, bio: user.bio });
 });
 
 app.post('/api/avatar', authRequired, upload.single('avatar'), (req, res) => {
   const user = getUserByLogin(req.session.userLogin);
-  if (!user) {
-    return res.status(404).json({ error: 'Пользователь не найден' });
-  }
-
-  if (!req.file) {
-    return res.status(400).json({ error: 'Файл не загружен' });
-  }
-
+  if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+  if (!req.file) return res.status(400).json({ error: 'Файл не загружен' });
   if (!req.file.mimetype.startsWith('image/')) {
     return res.status(400).json({ error: 'Аватар должен быть картинкой' });
   }
 
   user.avatar = '/uploads/' + req.file.filename;
   saveUsers();
-  emitUsers();
+
+  io.emit('users changed');
 
   return res.json({ ok: true, avatar: user.avatar });
+});
+
+app.get('/api/search-users', authRequired, (req, res) => {
+  const q = String(req.query.q || '').trim().toLowerCase();
+  const myLogin = req.session.userLogin;
+
+  if (!q) return res.json([]);
+
+  const found = users
+    .filter(u => u.login.toLowerCase().includes(q))
+    .filter(u => u.login !== myLogin)
+    .slice(0, 20)
+    .map(publicUser);
+
+  return res.json(found);
+});
+
+app.get('/api/conversations', authRequired, (req, res) => {
+  const myLogin = req.session.userLogin;
+
+  const list = conversations
+    .filter(c => canAccessConversation(myLogin, c))
+    .map(c => {
+      const publicConv = getConversationForUser(c, myLogin);
+      const lastMessage = [...messages].reverse().find(m => m.conversationId === c.id) || null;
+
+      return {
+        ...publicConv,
+        lastMessage: lastMessage
+          ? {
+              login: lastMessage.login,
+              text: lastMessage.type === 'text'
+                ? lastMessage.text
+                : lastMessage.type === 'image'
+                  ? '[фото]'
+                  : '[видео]',
+              time: lastMessage.time
+            }
+          : null
+      };
+    })
+    .sort((a, b) => {
+      const at = a.lastMessage ? a.lastMessage.time : a.createdAt;
+      const bt = b.lastMessage ? b.lastMessage.time : b.createdAt;
+      return bt - at;
+    });
+
+  return res.json(list);
+});
+
+app.get('/api/conversations/:id/messages', authRequired, (req, res) => {
+  const myLogin = req.session.userLogin;
+  const conversation = conversations.find(c => c.id === req.params.id);
+
+  if (!conversation || !canAccessConversation(myLogin, conversation)) {
+    return res.status(404).json({ error: 'Чат не найден' });
+  }
+
+  return res.json(getConversationMessages(conversation.id));
+});
+
+app.post('/api/conversations/private/:login', authRequired, (req, res) => {
+  const myLogin = req.session.userLogin;
+  const targetLogin = String(req.params.login || '').trim();
+
+  if (!targetLogin) {
+    return res.status(400).json({ error: 'Логин не указан' });
+  }
+
+  if (targetLogin === myLogin) {
+    return res.status(400).json({ error: 'Нельзя создать личку с собой' });
+  }
+
+  const target = getUserByLogin(targetLogin);
+  if (!target) {
+    return res.status(404).json({ error: 'Пользователь не найден' });
+  }
+
+  let conv = getPrivateConversation(myLogin, target.login);
+
+  if (!conv) {
+    conv = {
+      id: makeId(),
+      type: 'private',
+      name: '',
+      members: [myLogin, target.login],
+      createdBy: myLogin,
+      createdAt: Date.now()
+    };
+    conversations.push(conv);
+    saveConversations();
+  }
+
+  return res.json({
+    ok: true,
+    conversation: getConversationForUser(conv, myLogin)
+  });
+});
+
+app.post('/api/groups', authRequired, (req, res) => {
+  const myLogin = req.session.userLogin;
+  const name = String(req.body.name || '').trim().slice(0, 40);
+  const members = Array.isArray(req.body.members) ? req.body.members : [];
+
+  if (!name) {
+    return res.status(400).json({ error: 'Название группы пустое' });
+  }
+
+  const cleanMembers = [...new Set(
+    members
+      .map(v => String(v || '').trim())
+      .filter(Boolean)
+      .filter(login => !!getUserByLogin(login))
+      .filter(login => login !== myLogin)
+  )];
+
+  const conv = {
+    id: makeId(),
+    type: 'group',
+    name,
+    members: [myLogin, ...cleanMembers],
+    createdBy: myLogin,
+    createdAt: Date.now()
+  };
+
+  conversations.push(conv);
+  saveConversations();
+
+  return res.json({
+    ok: true,
+    conversation: getConversationForUser(conv, myLogin)
+  });
 });
 
 app.post('/api/upload', authRequired, upload.single('file'), (req, res) => {
@@ -309,201 +499,126 @@ app.post('/api/upload', authRequired, upload.single('file'), (req, res) => {
   });
 });
 
-app.post('/api/mute', authRequired, (req, res) => {
-  const currentUser = getUserByLogin(req.session.userLogin);
-  if (!currentUser || currentUser.role !== 'creator') {
-    return res.status(403).json({ error: 'Только создатель может мутить' });
-  }
+const onlineUsers = new Set();
+const userSockets = new Map();
+const typingMap = new Map();
 
-  const target = getUserByLogin(String(req.body.login || '').trim());
-  const minutes = Number(req.body.minutes || 0);
+function emitPresence() {
+  io.emit('presence update', Array.from(onlineUsers));
+}
 
-  if (!target) {
-    return res.status(404).json({ error: 'Пользователь не найден' });
-  }
-
-  if (target.role === 'creator') {
-    return res.status(400).json({ error: 'Создателя мутить нельзя' });
-  }
-
-  if (minutes <= 0 || minutes > 10080) {
-    return res.status(400).json({ error: 'Минуты: от 1 до 10080' });
-  }
-
-  target.mutedUntil = Date.now() + minutes * 60 * 1000;
-  saveUsers();
-  emitUsers();
-  io.emit('system message', `${target.login} получил мут на ${minutes} мин.`);
-
-  return res.json({ ok: true });
-});
-
-app.post('/api/unmute', authRequired, (req, res) => {
-  const currentUser = getUserByLogin(req.session.userLogin);
-  if (!currentUser || currentUser.role !== 'creator') {
-    return res.status(403).json({ error: 'Только создатель может снимать мут' });
-  }
-
-  const target = getUserByLogin(String(req.body.login || '').trim());
-  if (!target) {
-    return res.status(404).json({ error: 'Пользователь не найден' });
-  }
-
-  target.mutedUntil = 0;
-  saveUsers();
-  emitUsers();
-  io.emit('system message', `${target.login} больше не в муте.`);
-
-  return res.json({ ok: true });
-});
-
-io.on('connection', (socket) => {
+io.on('connection', socket => {
   const sessionData = socket.request.session;
 
   if (!sessionData || !sessionData.userLogin) {
     return socket.disconnect();
   }
 
-  const user = getUserByLogin(sessionData.userLogin);
+  const myLogin = sessionData.userLogin;
+  const user = getUserByLogin(myLogin);
+
   if (!user) {
     return socket.disconnect();
   }
 
-  onlineUsers.add(user.login);
-  emitUsers();
+  if (!userSockets.has(myLogin)) userSockets.set(myLogin, new Set());
+  userSockets.get(myLogin).add(socket.id);
+  onlineUsers.add(myLogin);
+  emitPresence();
 
-  socket.emit('load messages', messages);
-  socket.emit('pinned update', currentPinnedMessage());
+  socket.on('join conversation', ({ conversationId }) => {
+    const conversation = conversations.find(c => c.id === conversationId);
+    if (!conversation || !canAccessConversation(myLogin, conversation)) return;
 
-  socket.on('typing', (isTyping) => {
-    if (isTyping) typingUsers.add(user.login);
-    else typingUsers.delete(user.login);
-    emitTyping();
+    socket.join('conversation:' + conversationId);
   });
 
-  socket.on('chat message', (data) => {
-    const freshUser = getUserByLogin(sessionData.userLogin);
-    if (!freshUser) return;
+  socket.on('leave conversation', ({ conversationId }) => {
+    socket.leave('conversation:' + conversationId);
+  });
 
-    if (freshUser.mutedUntil && freshUser.mutedUntil > Date.now()) {
-      socket.emit('chat error', 'У тебя мут');
-      return;
+  socket.on('typing', ({ conversationId, isTyping }) => {
+    const conversation = conversations.find(c => c.id === conversationId);
+    if (!conversation || !canAccessConversation(myLogin, conversation)) return;
+
+    const key = `${conversationId}:${myLogin}`;
+
+    if (isTyping) {
+      typingMap.set(key, { conversationId, login: myLogin });
+    } else {
+      typingMap.delete(key);
     }
 
+    const currentTyping = Array.from(typingMap.values())
+      .filter(v => v.conversationId === conversationId)
+      .map(v => v.login);
+
+    io.to('conversation:' + conversationId).emit('typing update', {
+      conversationId,
+      users: currentTyping
+    });
+  });
+
+  socket.on('chat message', data => {
+    const freshUser = getUserByLogin(myLogin);
+    if (!freshUser) return;
     if (!data || typeof data !== 'object') return;
+
+    const conversationId = String(data.conversationId || '');
+    const conversation = conversations.find(c => c.id === conversationId);
+
+    if (!conversation || !canAccessConversation(myLogin, conversation)) return;
 
     const msg = {
       id: makeId(),
+      conversationId,
       login: freshUser.login,
       avatar: freshUser.avatar || '',
       time: Date.now(),
-      edited: false,
-      likes: [],
-      replyTo: null
+      type: 'text'
     };
 
-    if (data.replyTo) {
-      const original = messages.find(m => m.id === data.replyTo);
-      if (original) {
-        msg.replyTo = {
-          id: original.id,
-          login: original.login,
-          text:
-            original.type === 'text'
-              ? original.text
-              : original.type === 'image'
-                ? '[фото]'
-                : '[видео]'
-        };
-      }
-    }
-
     if (data.type === 'text') {
-      const cleanText = String(data.text || '').trim().slice(0, 1000);
-      if (!cleanText) return;
+      const text = String(data.text || '').trim().slice(0, 1000);
+      if (!text) return;
       msg.type = 'text';
-      msg.text = cleanText;
+      msg.text = text;
     } else if (data.type === 'image' || data.type === 'video') {
+      const url = String(data.url || '');
+      if (!url.startsWith('/uploads/')) return;
       msg.type = data.type;
-      msg.url = String(data.url || '');
-      if (!msg.url.startsWith('/uploads/')) return;
+      msg.url = url;
     } else {
       return;
     }
 
     messages.push(msg);
 
-    if (messages.length > 500) {
-      messages = messages.slice(-500);
+    if (messages.length > 5000) {
+      messages = messages.slice(-5000);
     }
 
     saveMessages();
-    io.emit('chat message', msg);
-  });
 
-  socket.on('edit message', ({ id, text }) => {
-    const msg = messages.find(m => m.id === id);
-    if (!msg || msg.login !== user.login || msg.type !== 'text') return;
-
-    const cleanText = String(text || '').trim().slice(0, 1000);
-    if (!cleanText) return;
-
-    msg.text = cleanText;
-    msg.edited = true;
-    saveMessages();
-    io.emit('message updated', msg);
-  });
-
-  socket.on('toggle like', (id) => {
-    const msg = messages.find(m => m.id === id);
-    if (!msg) return;
-
-    if (!Array.isArray(msg.likes)) msg.likes = [];
-
-    const idx = msg.likes.indexOf(user.login);
-    if (idx >= 0) msg.likes.splice(idx, 1);
-    else msg.likes.push(user.login);
-
-    saveMessages();
-    io.emit('message updated', msg);
-  });
-
-  socket.on('delete message', (id) => {
-    const currentUser = getUserByLogin(sessionData.userLogin);
-    const index = messages.findIndex(m => m.id === id);
-
-    if (index === -1) return;
-
-    const msg = messages[index];
-    if (msg.login !== user.login && currentUser.role !== 'creator') return;
-
-    messages.splice(index, 1);
-
-    if (pinnedMessageId === id) {
-      pinnedMessageId = null;
-      savePinned();
-      io.emit('pinned update', null);
-    }
-
-    saveMessages();
-    io.emit('message deleted', id);
-  });
-
-  socket.on('pin message', (id) => {
-    const currentUser = getUserByLogin(sessionData.userLogin);
-    if (!currentUser || currentUser.role !== 'creator') return;
-
-    const msg = messages.find(m => m.id === id) || null;
-    pinnedMessageId = msg ? msg.id : null;
-    savePinned();
-    io.emit('pinned update', msg);
+    io.to('conversation:' + conversationId).emit('chat message', msg);
+    io.emit('conversation updated', { conversationId });
   });
 
   socket.on('disconnect', () => {
-    onlineUsers.delete(user.login);
-    typingUsers.delete(user.login);
-    emitUsers();
-    emitTyping();
+    const set = userSockets.get(myLogin);
+    if (set) {
+      set.delete(socket.id);
+      if (set.size === 0) {
+        userSockets.delete(myLogin);
+        onlineUsers.delete(myLogin);
+      }
+    }
+
+    for (const [key, value] of typingMap.entries()) {
+      if (value.login === myLogin) typingMap.delete(key);
+    }
+
+    emitPresence();
   });
 });
 
